@@ -19,30 +19,7 @@ jobs:
       with:
         java-version: '8'
         distribution: 'temurin'
-
-    - name: Set up Android SDK for Ant
-      run: |
-        # Download and extract an older Android SDK version that includes Ant build tools
-        wget --quiet --output-document=android-sdk.tgz https://dl.google.com/android/android-sdk_r25.2.5-linux.tgz
-        tar -xzf android-sdk.tgz
-        rm android-sdk.tgz
-
-        # Set up environment variables. Note that GITHUB_WORKSPACE is the default working directory.
-        export ANDROID_HOME=$GITHUB_WORKSPACE/android-sdk-linux
-        export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
-        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "PATH=$PATH" >> $GITHUB_ENV
-
-        # Use the old 'android' tool to install/update SDK components.
-        # The 'echo y' is to accept licenses for the required packages.
-        (sleep 5; echo y) | android update sdk --no-ui --all --filter platform-tools,android-21,build-tools-21.1.2
-
-    - name: Create local.properties for library
-      run: echo "sdk.dir=$ANDROID_HOME" > leanback_lib/local.properties
-
-    - name: Create local.properties for app
-      run: echo "sdk.dir=$ANDROID_HOME" > linearlauncher/local.properties
-
+  
     - name: Build the application
       run: |
         cd linearlauncher
