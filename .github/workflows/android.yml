@@ -1,4 +1,4 @@
-name: Android CI
+name: Android CI with Ant
 
 on:
   push:
@@ -8,19 +8,47 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: set up JDK 11
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 8
       uses: actions/setup-java@v4
       with:
-        java-version: '11'
+        java-version: '8'
         distribution: 'temurin'
-        cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
+    - name: Set up Android SDK
+      run: |
+        # Using a known-stable version of command-line tools for older projects
+        wget --quiet --output-document=android-sdk.zip https://dl.google.com/android/repository/commandlinetools-linux-6858069_latest.zip
+        unzip -q android-sdk.zip -d $HOME/android-sdk-temp
+        # The tools are inside a 'cmdline-tools' directory, we move them to the root for older build system compatibility
+        mv $HOME/android-sdk-temp/cmdline-tools $HOME/android-sdk
+        rm -rf $HOME/android-sdk-temp android-sdk.zip
+        # Set up environment variables
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools" >> $GITHUB_ENV
+        # Install required SDK packages. The 'yes' command is to auto-accept licenses.
+        # From project.properties, we see target=android-21.
+        yes | sdkmanager --licenses > /dev/null
+        sdkmanager "platform-tools" "platforms;android-21" "build-tools;21.1.2"
+
+    - name: Create local.properties for library
+      run: echo "sdk.dir=$ANDROID_HOME" > leanback_lib/local.properties
+
+    - name: Create local.properties for app
+      run: echo "sdk.dir=$ANDROID_HOME" > linearlauncher/local.properties
+
+    - name: Build the application
+      run: |
+        cd linearlauncher
+        ant debug
+
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linearlauncher-debug-apk
+        path: linearlauncher/bin/*-debug.apk
